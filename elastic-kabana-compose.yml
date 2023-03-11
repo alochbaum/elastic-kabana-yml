@@ -1,0 +1,65 @@
+version: '3.7'
+
+# This file is to create Elasticsearch and Kabana containers
+#  written by Andrew Lochbaum
+#  version 1.3
+
+
+# Before runnning this docker-compose.yml,
+# You have to configure vm.max_map_count = 262144.
+# Otherwise elasticsearch container does not launch certainly by
+# displaying following error message.
+#  ERROR: [1] bootstrap checks failed
+#  [1]: max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]
+# When you use linux, execute following command.
+# sudo nano /etc/sysctl.conf
+# vm.max_map_count = 262144
+# sudo sysctl --system
+
+services: 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.13.2
+    container_name: elasticsearch
+    restart: always
+    environment:
+      discovery.type: single-node
+      bootstrap.memory_lock: "true"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+      xpack.security.enabled: "true"
+      ELASTIC_USERNAME: elastic
+      # Note: Elasticsearch pw must be alphanumeric special characters like ! and ? aren't allowed
+      ELASTIC_PASSWORD: pass123
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - 9200:9200
+      - 9300:9300
+    volumes:
+      - elasticsearch-volume:/usr/share/elasticsearch/data
+    networks:
+      - elasticnet
+  kibana:
+    container_name: kibana
+    image: docker.elastic.co/kibana/kibana:7.11.1
+    restart: always
+    ports:
+      - 5601:5601
+    environment:
+      ELASTICSEARCH_USERNAME: elastic
+      ELASTICSEARCH_PASSWORD: pass123
+    links:
+      - elasticsearch
+    depends_on:
+      - elasticsearch
+    networks:
+      - elasticnet
+      
+volumes:
+  elasticsearch-volume:
+    name: elasticsearch-volume
+    
+networks:
+  elasticnet:
+    driver: bridge
